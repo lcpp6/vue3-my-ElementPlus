@@ -1,24 +1,22 @@
 <template>
   <!--本组件将选择、分页功能进行组合
     使用示例：
-    <MySelect :initValue="initValue" style="width: 200px"
+    <MySelect :initValue="initValue"
               :valueList="valueList"
               :placeholder="placeholder"
               :multiple="multiple"
-              @selectorChanged="selectorChanged"
-              @selectorCleared="selectorCleared"
-              @submitValue="submitValue"/>
+              @selectorChanged="(e)=>value=e"
+              @selectorCleared="(e)=>value=e"/>
   -->
-
   <!--重要修改点：
-        1 单选逻辑：
-          原组件中，单选时，value是单一字符串，多选时，value是字符串数组---》
-          现在，单选时和多选，value都是字符串数组（单选时长度为1）
-        2 添加分页选择功能：分页功能需要依赖另一个自定义升级的分页组件MyPagination
+        1 单选多选逻辑的重写：
+          原组件：单选时，value是单一字符串，多选时，value是字符串数组---》
+          现在：  单选时和多选，value都是字符串数组
+        2 添加分页选择功能：依赖另一个自定义升级的分页组件MyPagination
   -->
   <div style="width: 100%;height: 100%;">
     <!--加class="elPaginationSelect"是为了让下拉框的宽度和分页器的宽度一致---因此你必须在使用的时候给出具体宽度(200px)-->
-    <el-select :disabled="disabled" ref="select" class="elPaginationSelect"
+    <el-select :disabled="disabled" ref="select" class="elPaginationSelect1"
                clearable
                filterable
                multiple
@@ -37,8 +35,7 @@
       <MyPagination :currentPageNum="currentPageNum" style="margin-bottom: 0;position: relative;bottom: 0"
                     :pageSize="pageSize"
                     :total="total"
-
-                    :small-size="true"
+                    :small="true"
                     @update-currentPageNum="(e)=>currentPageNum=e"
                     @update-pageSize="(e)=>pageSize=e"/>
     </el-select>
@@ -76,9 +73,11 @@ export default {
   },
   data() {
     return {
+      // Select
       value: [],// 单选/多选时 字符串数组
       valueListFilter: [],// 当用户进行搜索过滤时 它存的是过滤后的下拉列表// 当用户没有搜索时 它存的是原始完整的下拉列表
 
+      // Pagination
       pageSize: 5,
       currentPageNum: 1,
     };
@@ -115,9 +114,8 @@ export default {
     },
     // 选中值时调用，参数为当前选中的值，字符串数组
     selectorChange(val) {
-      // 重新自定义多选：----- 本组件内都是多选(val是字符串数组)
-      // console.log("selectorChange:", val)
-      if (!this.multiple) {// 父组件要求单选 只能选中一个，选中后，下拉框关闭
+      // 重新自定义单选、多选：
+      if (!this.multiple) {// 定义单选：只能选中一个，选中后，下拉框关闭
         if (val.length === 1) {// 第一次选择
           this.value = [val[0]]// 单选时 value是字符串数组，但是长度为1
         } else if (val.length === 2) {// 前面已经有选择了，再次选择
@@ -127,29 +125,20 @@ export default {
         this.$nextTick(() => {
           this.$refs.select.blur()
         })
-      } else {// 父组件本就要求多选 不作多余处理
+      } else {// 多选
         this.value = val
       }
-      this.$emit("selectorChanged", { // 通过$emit触发父组件的事件，将其他逻辑交由父组件处理
-        "value": this.value,
-        "placeholder": this.placeholder,
-      });
+      this.$emit("selectChanged", this.value);// 通过$emit触发父组件的事件，将其他逻辑交由父组件处理
     },
     // 清空时调用
     selectorClear() {
-      this.$emit("selectorCleared", {// 通过$emit触发父组件的事件，将其他逻辑交由父组件处理
-        "value": "",
-        "placeholder": this.placeholder,
-      });
+      this.value = []// 清空
+      this.$emit("selectCleared", this.value);// 通过$emit触发父组件的事件，将其他逻辑交由父组件处理
     },
     // 下拉框出现、关闭时调用，参数为 true 表示打开 false 表示关闭
     visibleChange(visible) {
-      // （即优先选择value[0]对应的页面显示下拉选择列表）
       if (!visible) {// 下拉框关闭 实现类似于【确认提交】的功能(由父组件完成) submit
-        this.$emit("submitValues", { // 通过$emit触发父组件的submit-values 事件，将其他逻辑交由父组件处理
-          "value": this.value,// 选中的值 字符串数组
-          "placeholder": this.placeholder,// 可用于标记是哪一个下拉框实例（不是最优解决方案）
-        });
+
       }
     },
 
@@ -168,10 +157,6 @@ export default {
 </script>
 
 <style scoped>
-.elPaginationSelect {
-  width: 100%;
-  border: none !important;
-}
 
 .elPaginationSelect .el-input input {
   border: none !important;
